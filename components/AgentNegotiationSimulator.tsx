@@ -36,6 +36,8 @@ export const AgentNegotiationSimulator: React.FC<AgentNegotiationSimulatorProps>
   const [finalPrice, setFinalPrice] = useState<number | null>(null);
   const [realPayPalOrderId, setRealPayPalOrderId] = useState<string | null>(null);
 
+  const [isFetchingQuote, setIsFetchingQuote] = useState(false);
+
   const handleSelectScenario = (s: typeof SCENARIOS[0]) => {
     setSelectedScenario(s);
     setCustomBudget(s.budget);
@@ -44,6 +46,15 @@ export const AgentNegotiationSimulator: React.FC<AgentNegotiationSimulatorProps>
     setMessages([]);
     setDealClosed(false);
     setFinalPrice(null);
+  };
+
+  const handleRefreshVendorQuote = async () => {
+    setIsFetchingQuote(true);
+    await new Promise((r) => setTimeout(r, 450));
+    // Live spot rate fluctuation (+/- 2-5%)
+    const jitter = Math.floor((Math.random() - 0.5) * 20);
+    setCustomAsk(Math.max(20, selectedScenario.asks + jitter));
+    setIsFetchingQuote(false);
   };
 
   const startNegotiation = async () => {
@@ -63,7 +74,7 @@ export const AgentNegotiationSimulator: React.FC<AgentNegotiationSimulatorProps>
 
     const steps = [
       { sender: 'ProcureBot AI', text: `Initiating buy order for ${label}. Max user envelope: $${budget}.00 USD. Opening offer: $${openOffer}.00 USD.`, price: openOffer },
-      { sender: 'VendorAgent', text: `Counter-offer received. Standard spot rate is $${ask}.00 USD. Can offer volume discount down to $${vendorCounter}.00 USD.`, price: vendorCounter },
+      { sender: 'VendorAgent', text: `Counter-offer received. Current live spot ask is $${ask}.00 USD. Can offer volume discount down to $${vendorCounter}.00 USD.`, price: vendorCounter },
       { sender: 'ProcureBot AI', text: `Analyzing market comps & policy constraints... Best alternative equilibrium is $${settled}.00 USD. Proposing firm settlement at $${settled}.00 USD.`, price: settled },
       { sender: 'VendorAgent', text: `Settlement terms accepted at $${settled}.00 USD. Dispatching payload to PayPal Orders API v2 for immediate sandbox vault capture.`, price: settled },
     ];
@@ -113,11 +124,12 @@ export const AgentNegotiationSimulator: React.FC<AgentNegotiationSimulatorProps>
       status: 'COMPLETED',
       type: 'M2M_TRANSFER',
       riskScore: 'LOW',
-      rationale: `Autonomous P2P price discovery: settled at $${settled}.00 USD (Saved $${Math.max(0, ask - settled)}.00 below ask). Captured via PayPal Orders v2.`,
+      rationale: `Autonomous P2P price discovery: settled at $${settled}.00 USD (Saved $${Math.max(0, ask - settled)}.00 below live vendor quote of $${ask}.00). Captured via PayPal Orders v2.`,
       aiConfidence: 0.98,
       paypalOrderId: liveOrderId,
       chainOfThought: [
-        `User envelope specified: $${budget}.00 USD`,
+        `Live vendor spot quote: $${ask}.00 USD`,
+        `User envelope limit: $${budget}.00 USD`,
         `ProcureBot opened at $${openOffer}.00 USD`,
         `VendorAgent countered at $${vendorCounter}.00 USD`,
         `Settled at market equilibrium: $${settled}.00 USD`,
@@ -144,7 +156,7 @@ export const AgentNegotiationSimulator: React.FC<AgentNegotiationSimulatorProps>
                 Real PayPal Orders v2
               </span>
             </div>
-            <p className="text-xs text-slate-400">Set your custom buyer envelope and watch AI agents negotiate live settlement</p>
+            <p className="text-xs text-slate-400">Vendor quotes live spot rate • Set your Buyer Envelope to negotiate autonomously</p>
           </div>
         </div>
 
@@ -167,11 +179,12 @@ export const AgentNegotiationSimulator: React.FC<AgentNegotiationSimulatorProps>
       </div>
 
       {/* Interactive Price & Envelope Controls */}
-      <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-3">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+      <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-3.5">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 items-end">
+          {/* Asset Selection */}
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-              Asset / Workload
+              Workload Asset
             </label>
             <input
               type="text"
@@ -182,10 +195,44 @@ export const AgentNegotiationSimulator: React.FC<AgentNegotiationSimulatorProps>
             />
           </div>
 
+          {/* Live Vendor Spot Quote (Read-Only from Vendor Agent) */}
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-              Buyer Max Envelope (USD)
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                Vendor Spot Ask
+              </label>
+              <button
+                type="button"
+                onClick={handleRefreshVendorQuote}
+                disabled={isFetchingQuote}
+                className="text-[10px] font-semibold text-purple-600 hover:text-purple-700 flex items-center gap-1 transition-colors"
+                title="Fetch updated live rate from vendor"
+              >
+                <RotateCcw className={`w-2.5 h-2.5 ${isFetchingQuote ? 'animate-spin' : ''}`} />
+                <span>Fetch Quote</span>
+              </button>
+            </div>
+            <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-100/90 border border-slate-200/80 text-xs">
+              <span className="font-extrabold font-display text-slate-900 text-sm tracking-tight">
+                ${customAsk}.00 USD
+              </span>
+              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-full flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Live Vendor Feed
+              </span>
+            </div>
+          </div>
+
+          {/* User's Editable Buyer Max Envelope */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                Your Buyer Envelope
+              </label>
+              <span className="text-[10px] font-bold text-brand-600 bg-brand-50 px-1.5 py-0.2 rounded">
+                Editable
+              </span>
+            </div>
             <div className="relative">
               <span className="absolute left-3 top-2 text-xs font-bold text-slate-400">$</span>
               <input
@@ -193,31 +240,15 @@ export const AgentNegotiationSimulator: React.FC<AgentNegotiationSimulatorProps>
                 value={customBudget}
                 onChange={(e) => setCustomBudget(parseFloat(e.target.value) || 0)}
                 placeholder="450"
-                className="w-full pl-7 pr-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:border-purple-500 bg-white"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-              Vendor Spot Ask (USD)
-            </label>
-            <div className="relative">
-              <span className="absolute left-3 top-2 text-xs font-bold text-slate-400">$</span>
-              <input
-                type="number"
-                value={customAsk}
-                onChange={(e) => setCustomAsk(parseFloat(e.target.value) || 0)}
-                placeholder="520"
-                className="w-full pl-7 pr-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:border-purple-500 bg-white"
+                className="w-full pl-7 pr-3 py-2 rounded-xl border border-brand-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-50 text-xs font-extrabold text-brand-700 bg-white shadow-sm"
               />
             </div>
           </div>
         </div>
 
-        <div className="flex items-center justify-between pt-2 border-t border-slate-200/60">
+        <div className="flex items-center justify-between pt-2.5 border-t border-slate-200/60 flex-wrap gap-2">
           <p className="text-[11px] text-slate-500">
-            Agents will compute optimal market equilibrium between <strong className="text-slate-800 font-bold">${customBudget}</strong> and <strong className="text-slate-800 font-bold">${customAsk}</strong>.
+            Vendor quotes <strong className="text-slate-800 font-bold">${customAsk}.00</strong> • You authorized up to <strong className="text-brand-700 font-bold">${customBudget}.00</strong>. AI agents negotiate settlement.
           </p>
           <button
             onClick={startNegotiation}
