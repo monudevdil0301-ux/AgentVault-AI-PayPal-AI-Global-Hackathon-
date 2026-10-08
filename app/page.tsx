@@ -401,6 +401,9 @@ export default function Home() {
             <AgentNegotiationSimulator
               onNewTransaction={handleNewTransaction}
               onUpdateAgentBalance={handleUpdateAgentBalance}
+              paypalClientId={paypalClientId}
+              paypalSecret={paypalSecret}
+              apiKey={geminiKey}
             />
           </div>
         )}
