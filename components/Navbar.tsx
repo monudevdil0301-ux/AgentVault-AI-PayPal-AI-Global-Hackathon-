@@ -1,8 +1,6 @@
-'use client';
-
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Settings, Plus } from 'lucide-react';
+import { Settings, Plus, Play, Sparkles } from 'lucide-react';
 
 interface NavbarProps {
   activeTab: string;
@@ -11,6 +9,8 @@ interface NavbarProps {
   onOpenSettings: () => void;
   onOpenTopup: () => void;
   isSandboxMode: boolean;
+  onRunJudgeTour?: () => void;
+  isTourRunning?: boolean;
 }
 
 const tabs = [
@@ -28,6 +28,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenSettings,
   onOpenTopup,
   isSandboxMode,
+  onRunJudgeTour,
+  isTourRunning,
 }) => {
   return (
     <nav className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-subtle">
@@ -76,7 +78,25 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Right */}
-        <div className="flex items-center gap-3.5">
+        <div className="flex items-center gap-3">
+          {onRunJudgeTour && (
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={onRunJudgeTour}
+              disabled={isTourRunning}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold font-display transition-all ${
+                isTourRunning 
+                  ? 'bg-amber-50 text-amber-700 border border-amber-200 animate-pulse'
+                  : 'bg-gradient-to-r from-brand-600 to-blue-700 text-white shadow-sm shadow-brand-500/25 hover:brightness-105'
+              }`}
+              title="Run 1-Click Interactive Judge Demo Walkthrough"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>{isTourRunning ? 'Tour In Progress...' : 'Judge Demo Tour'}</span>
+            </motion.button>
+          )}
+
           {isSandboxMode && (
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200/70">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />

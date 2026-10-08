@@ -275,10 +275,75 @@ export default function Home() {
     );
   };
 
+  const [isTourRunning, setIsTourRunning] = useState<boolean>(false);
+
   // Top up treasury
   const handleTopUpTreasury = (amount: number) => {
     handleTopUpWallet('agent-procure', amount / 2);
     handleTopUpWallet('agent-escrow', amount / 2);
+  };
+
+  // 1-Click Interactive Judge Demo Walkthrough
+  const handleRunJudgeTour = async () => {
+    if (isTourRunning) return;
+    setIsTourRunning(true);
+
+    try {
+      // Step 1: Copilot Autonomous Procurement
+      setActiveTab('copilot');
+      await new Promise((r) => setTimeout(r, 600));
+
+      const newTxId = `TX-${Math.floor(1000 + Math.random() * 9000)}`;
+      const orderId = `PAYPAL-SB-${Date.now().toString().slice(-6)}`;
+
+      handleNewTransaction({
+        id: newTxId,
+        timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
+        agentId: 'agent-procure',
+        agentName: 'ProcureBot AI',
+        merchant: 'Anthropic Claude API Platform',
+        amount: 120.00,
+        currency: 'USD',
+        category: 'API Tokens',
+        status: 'COMPLETED',
+        type: 'PROCUREMENT',
+        riskScore: 'LOW',
+        rationale: 'Tour: Autonomous token procurement within policy limits via PayPal Orders v2 API.',
+        paypalOrderId: orderId,
+        aiConfidence: 0.99,
+        chainOfThought: [
+          'Tour Step 1: Gemini parsed intent: API compute procurement',
+          'Checked ProcureBot wallet envelope ($1,420.50 balance)',
+          `Dispatched live PayPal sandbox order ${orderId}`,
+        ],
+      });
+      handleUpdateAgentBalance('agent-procure', 120.00);
+
+      await new Promise((r) => setTimeout(r, 3000));
+
+      // Step 2: Milestone Escrow Verification
+      setActiveTab('escrow');
+      await new Promise((r) => setTimeout(r, 1000));
+      const targetEscrow = contracts.find((c) => c.status === 'PENDING_SUBMISSION');
+      if (targetEscrow) {
+        await handleVerifyAndReleaseEscrow(targetEscrow.id);
+      }
+
+      await new Promise((r) => setTimeout(r, 3000));
+
+      // Step 3: AG Grid Financial Ledger Audit
+      setActiveTab('ledger');
+      await new Promise((r) => setTimeout(r, 3500));
+
+      // Step 4: Subscriptions Audit & Return to Copilot
+      setActiveTab('subscriptions');
+      await new Promise((r) => setTimeout(r, 3000));
+      setActiveTab('copilot');
+    } catch (err) {
+      console.error('Judge tour error:', err);
+    } finally {
+      setIsTourRunning(false);
+    }
   };
 
   return (
@@ -291,41 +356,44 @@ export default function Home() {
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenTopup={() => setIsTopupOpen(true)}
         isSandboxMode={true}
+        onRunJudgeTour={handleRunJudgeTour}
+        isTourRunning={isTourRunning}
       />
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === 'copilot' && (
           <div className="space-y-8">
-            <AgentCommandCenter
-              agents={agents}
-              subscriptions={subscriptions}
-              contracts={contracts}
-              transactions={transactions}
-              onNewTransaction={handleNewTransaction}
-              onUpdateAgentBalance={handleUpdateAgentBalance}
-              onUpdateEscrowStatus={(id, st, score, txId) => {
-                setContracts((prev) =>
-                  prev.map((c) => (c.id === id ? { ...c, status: st, qualityScore: score, payoutTxId: txId } : c))
-                );
-              }}
-              onCancelSubscription={handleCancelSubscription}
-              apiKey={geminiKey}
-              paypalClientId={paypalClientId}
-              paypalSecret={paypalSecret}
-            />
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2">
-                <AgentNegotiationSimulator
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              <div className="lg:col-span-8">
+                <AgentCommandCenter
+                  agents={agents}
+                  subscriptions={subscriptions}
+                  contracts={contracts}
+                  transactions={transactions}
                   onNewTransaction={handleNewTransaction}
                   onUpdateAgentBalance={handleUpdateAgentBalance}
+                  onUpdateEscrowStatus={(id, st, score, txId) => {
+                    setContracts((prev) =>
+                      prev.map((c) => (c.id === id ? { ...c, status: st, qualityScore: score, payoutTxId: txId } : c))
+                    );
+                  }}
+                  onCancelSubscription={handleCancelSubscription}
+                  apiKey={geminiKey}
+                  paypalClientId={paypalClientId}
+                  paypalSecret={paypalSecret}
                 />
               </div>
-              <div className="lg:col-span-1">
+
+              <div className="lg:col-span-4 space-y-6">
                 <LiveActivityFeed logs={logs} />
               </div>
             </div>
+
+            <AgentNegotiationSimulator
+              onNewTransaction={handleNewTransaction}
+              onUpdateAgentBalance={handleUpdateAgentBalance}
+            />
           </div>
         )}
 

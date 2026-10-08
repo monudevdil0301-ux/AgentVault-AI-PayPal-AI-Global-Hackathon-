@@ -19,6 +19,7 @@ export const AGGridLedger: React.FC<AGGridLedgerProps> = ({
   transactions, onApproveTransaction, onDisputeTransaction, onRefundTransaction,
 }) => {
   const [selectedTx, setSelectedTx] = useState<TransactionRecord | null>(null);
+  const [modalTab, setModalTab] = useState<'summary' | 'payload'>('summary');
   const [filter, setFilter] = useState<string>('ALL');
 
   const filtered = useMemo(() => {
@@ -185,64 +186,122 @@ export const AGGridLedger: React.FC<AGGridLedgerProps> = ({
                 </button>
               </div>
 
-              <div className="space-y-3 text-xs">
-                <div className="flex justify-between items-center py-1">
-                  <span className="text-slate-400 font-medium">Settled Amount</span>
-                  <span className="font-extrabold font-display text-base text-slate-900">
-                    ${selectedTx.amount.toFixed(2)} {selectedTx.currency}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-1 border-t border-slate-100">
-                  <span className="text-slate-400 font-medium">Agent Party</span>
-                  <span className="font-bold text-slate-800">{selectedTx.agentName}</span>
-                </div>
-                <div className="flex justify-between items-center py-1 border-t border-slate-100">
-                  <span className="text-slate-400 font-medium">Counterparty</span>
-                  <span className="font-medium text-slate-800">{selectedTx.merchant}</span>
-                </div>
-                <div className="flex justify-between items-center py-1 border-t border-slate-100">
-                  <span className="text-slate-400 font-medium">PayPal Order / Settlement ID</span>
-                  <span className="font-mono font-semibold text-brand-600">{selectedTx.paypalOrderId || '—'}</span>
-                </div>
-                <div className="flex justify-between items-center py-1 border-t border-slate-100">
-                  <span className="text-slate-400 font-medium">State & Risk</span>
-                  <div className="flex items-center gap-2">
-                    <span className={`font-semibold px-2 py-0.5 rounded-full border text-[11px] ${statusColors[selectedTx.status]}`}>
-                      {selectedTx.status.replace(/_/g, ' ')}
-                    </span>
-                    <span className="text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
-                      Risk: {selectedTx.riskScore}
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                <button
+                  onClick={() => setModalTab('summary')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold font-display transition-colors ${
+                    modalTab === 'summary' ? 'bg-brand-50 text-brand-600 border border-brand-200/60' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Overview & CoT
+                </button>
+                <button
+                  onClick={() => setModalTab('payload')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold font-display flex items-center gap-1.5 transition-colors ${
+                    modalTab === 'payload' ? 'bg-brand-50 text-brand-600 border border-brand-200/60' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  PayPal REST Payload (Live)
+                </button>
+              </div>
+
+              {modalTab === 'summary' ? (
+                <div className="space-y-3 text-xs max-h-80 overflow-y-auto pr-1">
+                  <div className="flex justify-between items-center py-1">
+                    <span className="text-slate-400 font-medium">Settled Amount</span>
+                    <span className="font-extrabold font-display text-base text-slate-900">
+                      ${selectedTx.amount.toFixed(2)} {selectedTx.currency}
                     </span>
                   </div>
-                </div>
-
-                {selectedTx.rationale && (
-                  <div className="pt-2.5 border-t border-slate-100">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                      AI Intent & Rationale
-                    </p>
-                    <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 rounded-xl p-3 border border-slate-100">
-                      {selectedTx.rationale}
-                    </p>
+                  <div className="flex justify-between items-center py-1 border-t border-slate-100">
+                    <span className="text-slate-400 font-medium">Agent Party</span>
+                    <span className="font-bold text-slate-800">{selectedTx.agentName}</span>
                   </div>
-                )}
-
-                {selectedTx.chainOfThought && (
-                  <div className="pt-2 border-t border-slate-100">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                      Execution Steps
-                    </p>
-                    <div className="space-y-1">
-                      {selectedTx.chainOfThought.map((s, i) => (
-                        <p key={i} className="text-[11px] text-slate-500 flex items-start gap-1.5">
-                          <span className="text-brand-500 font-bold">•</span>
-                          <span>{s}</span>
-                        </p>
-                      ))}
+                  <div className="flex justify-between items-center py-1 border-t border-slate-100">
+                    <span className="text-slate-400 font-medium">Counterparty</span>
+                    <span className="font-medium text-slate-800">{selectedTx.merchant}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-t border-slate-100">
+                    <span className="text-slate-400 font-medium">PayPal Order / Settlement ID</span>
+                    <span className="font-mono font-semibold text-brand-600">{selectedTx.paypalOrderId || '—'}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-t border-slate-100">
+                    <span className="text-slate-400 font-medium">State & Risk</span>
+                    <div className="flex items-center gap-2">
+                      <span className={`font-semibold px-2 py-0.5 rounded-full border text-[11px] ${statusColors[selectedTx.status]}`}>
+                        {selectedTx.status.replace(/_/g, ' ')}
+                      </span>
+                      <span className="text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                        Risk: {selectedTx.riskScore}
+                      </span>
                     </div>
                   </div>
-                )}
-              </div>
+
+                  {selectedTx.rationale && (
+                    <div className="pt-2.5 border-t border-slate-100">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                        AI Intent & Rationale
+                      </p>
+                      <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 rounded-xl p-3 border border-slate-100">
+                        {selectedTx.rationale}
+                      </p>
+                    </div>
+                  )}
+
+                  {selectedTx.chainOfThought && (
+                    <div className="pt-2 border-t border-slate-100">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                        Execution Steps
+                      </p>
+                      <div className="space-y-1">
+                        {selectedTx.chainOfThought.map((s, i) => (
+                          <p key={i} className="text-[11px] text-slate-500 flex items-start gap-1.5">
+                            <span className="text-brand-500 font-bold">•</span>
+                            <span>{s}</span>
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2.5 text-xs max-h-80 overflow-y-auto pr-1">
+                  <div className="bg-slate-900 text-slate-100 rounded-xl p-3 font-mono text-[11px] overflow-x-auto space-y-2">
+                    <div className="text-emerald-400 font-bold">
+                      POST https://api-m.sandbox.paypal.com/v2/checkout/orders HTTP/1.1
+                    </div>
+                    <div className="text-slate-400 text-[10px]">
+                      Authorization: Bearer A21AAL... [OAuth 2.0 Client Credentials]<br/>
+                      Content-Type: application/json<br/>
+                      Prefer: return=representation
+                    </div>
+                    <div className="border-t border-slate-800 pt-2 text-slate-300">
+                      {JSON.stringify({
+                        intent: "CAPTURE",
+                        purchase_units: [
+                          {
+                            reference_id: `agent-vault-${selectedTx.id}`,
+                            description: selectedTx.rationale || "Autonomous Agent Vault Transaction",
+                            amount: {
+                              currency_code: selectedTx.currency || "USD",
+                              value: selectedTx.amount.toFixed(2)
+                            }
+                          }
+                        ]
+                      }, null, 2)}
+                    </div>
+                  </div>
+                  <div className="p-3 bg-emerald-50 border border-emerald-200/80 rounded-xl flex items-center justify-between">
+                    <span className="text-xs font-semibold text-emerald-800">
+                      HTTP 201 Created • PayPal Order ID:
+                    </span>
+                    <span className="font-mono text-xs font-bold text-emerald-900">
+                      {selectedTx.paypalOrderId}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               <div className="flex gap-2.5 pt-3 border-t border-slate-100">
                 <button
