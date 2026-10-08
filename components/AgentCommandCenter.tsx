@@ -154,24 +154,26 @@ export const AgentCommandCenter: React.FC<AgentCommandCenterProps> = ({
   };
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-6">
       {/* Hero Banner */}
-      <div className="bg-gradient-to-br from-[#005ea6] via-[#0070ba] to-[#1e40af] rounded-2xl p-8 sm:p-9 text-white relative overflow-hidden shadow-lg shadow-blue-900/10">
-        <div className="relative z-10 max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-sm border border-white/15 mb-3.5">
-            <Sparkles className="w-3.5 h-3.5 text-blue-200" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-blue-100">Live PayPal & AI Command Center</span>
+      <div className="bg-gradient-to-br from-[#005ea6] via-[#0070ba] to-[#1e40af] rounded-2xl p-8 sm:p-10 text-white relative overflow-hidden shadow-lg shadow-blue-900/10 min-h-[340px] flex flex-col justify-between">
+        <div className="relative z-10 max-w-2xl space-y-4">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/15">
+            <Sparkles className="w-4 h-4 text-blue-200" />
+            <span className="text-xs font-bold uppercase tracking-wider text-blue-100">AI Financial Command Center</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold font-display leading-[1.15] tracking-tight mb-3">
-            Delegate Money Movement<br />to Autonomous AI Agents
+          
+          <h1 className="text-3xl sm:text-4xl font-extrabold font-display leading-[1.18] tracking-tight">
+            Delegate Real Money Movement<br />to Autonomous AI Agents
           </h1>
-          <p className="text-sm sm:text-base text-blue-100/90 leading-relaxed font-normal mb-7 max-w-xl">
-            Instruct your autonomous fleet to procure API compute tokens, verify GitHub deliverables for escrow payout, or continuously audit SaaS subscriptions via live PayPal sandbox APIs.
+          
+          <p className="text-sm sm:text-base text-blue-100/90 leading-relaxed font-normal max-w-xl">
+            Instruct your autonomous fleet to procure API compute tokens, verify GitHub deliverables for milestone escrow release, or audit SaaS billing agreements via live PayPal developer APIs.
           </p>
 
           {/* Clean Command Input */}
-          <div className="flex items-center bg-white rounded-xl p-1.5 shadow-xl shadow-slate-950/15 border border-slate-100">
-            <Bot className="w-5 h-5 text-slate-400 ml-3.5 mr-2 flex-shrink-0" />
+          <div className="flex items-center bg-white rounded-xl p-2 shadow-xl shadow-slate-950/15 border border-slate-100 mt-2">
+            <Bot className="w-5 h-5 text-slate-400 ml-3 mr-2 flex-shrink-0" />
             <input
               ref={inputRef}
               type="text"
@@ -179,7 +181,7 @@ export const AgentCommandCenter: React.FC<AgentCommandCenterProps> = ({
               value={command}
               onChange={(e) => setCommand(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleExecute()}
-              className="flex-1 py-2.5 px-1 text-sm font-medium text-slate-800 placeholder-slate-400 bg-transparent outline-none tracking-normal"
+              className="flex-1 py-2 px-1 text-sm font-semibold text-slate-800 placeholder-slate-400 bg-transparent outline-none tracking-normal"
             />
             <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors" title="Voice Input">
               <Mic className="w-4 h-4" />
@@ -187,11 +189,30 @@ export const AgentCommandCenter: React.FC<AgentCommandCenterProps> = ({
             <button
               onClick={handleExecute}
               disabled={isExecuting}
-              className="flex items-center gap-2 px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-xs sm:text-sm font-bold font-display tracking-tight rounded-lg transition-all shadow-sm shadow-brand-500/30 disabled:opacity-60"
+              className="flex items-center gap-2 px-6 py-3 bg-brand-500 hover:bg-brand-600 text-white text-xs sm:text-sm font-bold font-display tracking-tight rounded-xl transition-all shadow-sm shadow-brand-500/30 disabled:opacity-60"
             >
               {isExecuting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               <span>Execute Live</span>
             </button>
+          </div>
+
+          {/* Quick Prompt Chips */}
+          <div className="flex items-center gap-2 flex-wrap pt-2">
+            <span className="text-[11px] font-semibold text-blue-200">Suggested:</span>
+            {[
+              { label: 'Procure $120 Tokens', id: 'procure' },
+              { label: 'Release $350 PR Escrow', id: 'escrow' },
+              { label: 'Audit SaaS Seats', id: 'audit' },
+              { label: 'M2M Transfer $12.50', id: 'micro' },
+            ].map((chip) => (
+              <button
+                key={chip.id}
+                onClick={() => handleScenario(chip.id)}
+                className="text-[11px] font-semibold bg-white/10 hover:bg-white/20 border border-white/15 px-3 py-1 rounded-lg text-white transition-colors"
+              >
+                ✦ {chip.label}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -249,7 +270,7 @@ export const AgentCommandCenter: React.FC<AgentCommandCenterProps> = ({
       </AnimatePresence>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { label: 'Active Autonomous Agents', value: agents.length.toString(), sub: 'Fleet Online & Guardrailed', icon: '🤖' },
           { label: 'Total Vault Balance', value: `$${agents.reduce((a, b) => a + b.balance, 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`, sub: 'PayPal Sandbox Treasury', icon: '💳' },
@@ -257,7 +278,7 @@ export const AgentCommandCenter: React.FC<AgentCommandCenterProps> = ({
           { label: 'Execution Success Rate', value: '99.8%', sub: 'Zero Policy Violations', icon: '📈' },
         ].map((stat, i) => (
           <div key={i} className="bg-white rounded-2xl border border-slate-200/80 shadow-card p-5 flex items-center gap-3.5 hover:shadow-card-hover transition-shadow">
-            <div className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-xl flex-shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-2xl flex-shrink-0">
               {stat.icon}
             </div>
             <div>
@@ -275,9 +296,9 @@ export const AgentCommandCenter: React.FC<AgentCommandCenterProps> = ({
         ))}
       </div>
 
-      {/* One-Click Scenarios */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
+      {/* One-Click Scenarios in spacious 2x2 Grid */}
+      <div className="space-y-3.5">
+        <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xs font-bold font-display text-slate-400 uppercase tracking-wider">
               One-Click Autonomous Scenarios
@@ -285,38 +306,41 @@ export const AgentCommandCenter: React.FC<AgentCommandCenterProps> = ({
             <p className="text-xs text-slate-500 mt-0.5">Dispatches live requests directly to PayPal developer platform</p>
           </div>
           <span className="text-xs font-semibold text-brand-600 hover:text-brand-700 cursor-pointer">
-            View All Scenarios →
+            Explore All 4 Flows →
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {SCENARIOS.map((s) => (
             <motion.div
               key={s.id}
               whileHover={{ y: -2 }}
-              className="bg-white rounded-2xl border border-slate-200/80 shadow-card p-5 flex flex-col cursor-pointer hover:shadow-card-hover hover:border-slate-300 transition-all"
+              className="bg-white rounded-2xl border border-slate-200/80 shadow-card p-5 flex flex-col justify-between cursor-pointer hover:shadow-card-hover hover:border-slate-300 transition-all min-h-[170px]"
               onClick={() => handleScenario(s.id)}
             >
-              <div className="flex items-start justify-between mb-3.5">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${iconColors[s.color]}`}>
-                  {s.color === 'blue' ? '🤖' : s.color === 'green' ? '🛡️' : s.color === 'amber' ? '⚡' : '🌐'}
+              <div>
+                <div className="flex items-start justify-between mb-3">
+                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl ${iconColors[s.color]}`}>
+                    {s.color === 'blue' ? '🤖' : s.color === 'green' ? '🛡️' : s.color === 'amber' ? '⚡' : '🌐'}
+                  </div>
+                  <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${tagColors[s.color]}`}>
+                    {s.tag}
+                  </span>
                 </div>
-                <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${tagColors[s.color]}`}>
-                  {s.tag}
-                </span>
+                <h3 className="text-base font-bold font-display text-slate-900 tracking-tight mb-1.5 leading-snug">
+                  {s.title}
+                </h3>
+                <p className="text-xs font-normal text-slate-500 leading-relaxed mb-4">
+                  "{s.desc}"
+                </p>
               </div>
-              <h3 className="text-sm font-bold font-display text-slate-900 tracking-tight mb-1.5 leading-snug">
-                {s.title}
-              </h3>
-              <p className="text-xs font-normal text-slate-500 leading-relaxed flex-1 mb-4">
-                "{s.desc}"
-              </p>
-              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                <span className="text-[11px] font-semibold text-slate-500 flex items-center gap-1">
+
+              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                <span className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
                   ⚡ {s.agent}
                 </span>
-                <button className="flex items-center gap-1 px-3 py-1.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold font-display rounded-lg transition-colors">
-                  <span>Run</span>
+                <button className="flex items-center gap-1 px-3.5 py-2 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold font-display rounded-xl transition-colors shadow-sm shadow-brand-500/20">
+                  <span>Run Scenario</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               </div>
