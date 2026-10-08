@@ -1,0 +1,100 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "AgentVault AI Autonomous Commerce Protocol API",
+    "description": "Enterprise multi-agent money movement, escrow verification, and subscription arbitrage powered by PayPal APIs and Google Gemini.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "AgentVault AI Team",
+      "url": "https://github.com/agentvault-ai"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/api",
+      "description": "Local Development Server"
+    }
+  ],
+  "paths": {
+    "/agent": {
+      "post": {
+        "summary": "Process Natural Language Multi-Agent Command",
+        "operationId": "processAgentCommand",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "prompt": { "type": "string" },
+                  "apiKey": { "type": "string" }
+                },
+                "required": ["prompt"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Gemini Agent Action Response with CoT Reasoning"
+          }
+        }
+      }
+    },
+    "/paypal/create-order": {
+      "post": {
+        "summary": "Create PayPal Orders v2 Transaction",
+        "operationId": "createPayPalOrder",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "amount": { "type": "number" },
+                  "currency": { "type": "string", "default": "USD" },
+                  "description": { "type": "string" }
+                },
+                "required": ["amount", "description"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "PayPal Order Created"
+          }
+        }
+      }
+    },
+    "/paypal/payout": {
+      "post": {
+        "summary": "Execute PayPal Payouts Batch for Milestone Escrow",
+        "operationId": "executePayPalPayout",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "receiverEmail": { "type": "string" },
+                  "amount": { "type": "number" },
+                  "note": { "type": "string" }
+                },
+                "required": ["receiverEmail", "amount"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "PayPal Payout Batch Dispatched"
+          }
+        }
+      }
+    }
+  }
+}
