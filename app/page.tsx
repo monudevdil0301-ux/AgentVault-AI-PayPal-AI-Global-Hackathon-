@@ -9,6 +9,8 @@ import { AgentWalletsView } from '@/components/AgentWalletsView';
 import { EscrowContractsView } from '@/components/EscrowContractsView';
 import { SubscriptionManagerView } from '@/components/SubscriptionManagerView';
 import { LiveActivityFeed } from '@/components/LiveActivityFeed';
+import { FleetGuardrailsWidget } from '@/components/FleetGuardrailsWidget';
+import { PayPalNetworkHealthWidget } from '@/components/PayPalNetworkHealthWidget';
 import { PayPalTopupModal } from '@/components/PayPalTopupModal';
 import { SettingsModal } from '@/components/SettingsModal';
 import { 
@@ -387,6 +389,12 @@ export default function Home() {
 
               <div className="lg:col-span-4 space-y-6">
                 <LiveActivityFeed logs={logs} />
+                <FleetGuardrailsWidget
+                  agents={agents}
+                  onOpenSettings={() => setIsSettingsOpen(true)}
+                  onOpenTopup={() => setIsTopupOpen(true)}
+                />
+                <PayPalNetworkHealthWidget isSandbox={true} />
               </div>
             </div>
 
