@@ -1,9 +1,17 @@
-'use client';
-
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Mic, Bot, ChevronRight, Loader2, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Send, Mic, Bot, ChevronRight, Loader2, Sparkles, CheckCircle2, AlertCircle, Edit3, Plus, X, RotateCcw } from 'lucide-react';
 import { AgentWallet, TransactionRecord, EscrowMilestone, SubscriptionItem } from '@/lib/store';
+
+export interface ScenarioItem {
+  id: string;
+  title: string;
+  desc: string;
+  agent: string;
+  tag: string;
+  color: 'blue' | 'green' | 'amber' | 'purple';
+  prompt: string;
+}
 
 interface AgentCommandCenterProps {
   agents: AgentWallet[];
@@ -19,11 +27,11 @@ interface AgentCommandCenterProps {
   paypalSecret: string;
 }
 
-const SCENARIOS = [
-  { id: 'procure', title: 'Autonomous API Procurement', desc: 'Procure 5M Anthropic & OpenAI API tokens ($120.00) within pre-approved envelope.', agent: 'ProcureBot AI', tag: 'Orders API', color: 'blue' },
-  { id: 'escrow', title: 'Milestone Escrow Payout', desc: 'Audit Sarah Jenkins PR #42 via Gemini AST and release $350.00 milestone.', agent: 'EscrowSentinel', tag: 'Payouts API', color: 'green' },
-  { id: 'audit', title: 'SaaS Subscription Audit', desc: 'Audit active billing, cancel inactive Figma seats ($168/mo) and dispute charges.', agent: 'SubSense Arbiter', tag: 'Subscriptions API', color: 'amber' },
-  { id: 'micro', title: 'M2M Micro-Settlement', desc: 'Execute $12.50 autonomous micro-transfer to DataScraper Fleet Bot for 5k records.', agent: 'FleetM2M MicroBot', tag: 'M2M Transfer', color: 'purple' },
+const INITIAL_SCENARIOS: ScenarioItem[] = [
+  { id: 'procure', title: 'Autonomous API Procurement', desc: 'Procure 5M Anthropic & OpenAI API tokens ($120.00) within pre-approved envelope.', agent: 'ProcureBot AI', tag: 'Orders API', color: 'blue', prompt: 'Procure $120 OpenAI API tokens for the research fleet' },
+  { id: 'escrow', title: 'Milestone Escrow Payout', desc: 'Audit Sarah Jenkins PR #42 via Gemini AST and release $350.00 milestone.', agent: 'EscrowSentinel', tag: 'Payouts API', color: 'green', prompt: 'Verify PR #42 and release milestone escrow payout of $350.00' },
+  { id: 'audit', title: 'SaaS Subscription Audit', desc: 'Audit active billing, cancel inactive Figma seats ($168/mo) and dispute charges.', agent: 'SubSense Arbiter', tag: 'Subscriptions API', color: 'amber', prompt: 'Audit all SaaS subscriptions and cancel unused Figma seats' },
+  { id: 'micro', title: 'M2M Micro-Settlement', desc: 'Execute $12.50 autonomous micro-transfer to DataScraper Fleet Bot for 5k records.', agent: 'FleetM2M MicroBot', tag: 'M2M Transfer', color: 'purple', prompt: 'Transfer $12.50 to DataScraper Fleet Bot for enriched records' },
 ];
 
 export const AgentCommandCenter: React.FC<AgentCommandCenterProps> = ({
@@ -31,14 +39,18 @@ export const AgentCommandCenter: React.FC<AgentCommandCenterProps> = ({
   onNewTransaction, onUpdateAgentBalance, onUpdateEscrowStatus, onCancelSubscription,
   apiKey, paypalClientId, paypalSecret,
 }) => {
+  const [scenarios, setScenarios] = useState<ScenarioItem[]>(INITIAL_SCENARIOS);
+  const [editingScenario, setEditingScenario] = useState<ScenarioItem | null>(null);
+  const [isEditingNew, setIsEditingNew] = useState<boolean>(false);
   const [command, setCommand] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
   const [result, setResult] = useState<{ message: string; isError?: boolean } | null>(null);
   const [chainOfThought, setChainOfThought] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleExecute = async () => {
-    if (!command.trim() || isExecuting) return;
+  const handleExecute = async (promptOverride?: string) => {
+    const activePrompt = promptOverride || command;
+    if (!activePrompt.trim() || isExecuting) return;
     setIsExecuting(true);
     setResult(null);
     setChainOfThought(['🤖 Step 1: Sending instruction to Gemini AI multi-agent orchestrator...']);
@@ -49,7 +61,7 @@ export const AgentCommandCenter: React.FC<AgentCommandCenterProps> = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: command,
+          prompt: activePrompt,
           apiKey,
           context: { agents, subscriptions, contracts, recentTransactions: transactions.slice(0, 5) },
         }),
@@ -65,7 +77,7 @@ export const AgentCommandCenter: React.FC<AgentCommandCenterProps> = ({
 
       const amount = agentData.data?.amount || 120.0;
       const merchant = agentData.data?.merchant || 'OpenAI API Platform';
-      const description = agentData.summary || `Autonomous procurement for ${command}`;
+      const description = agentData.summary || `Autonomous procurement for ${activePrompt}`;
 
       // 2. Call PayPal Sandbox Orders API
       setChainOfThought((prev) => [
@@ -129,14 +141,38 @@ export const AgentCommandCenter: React.FC<AgentCommandCenterProps> = ({
   };
 
   const handleScenario = (id: string) => {
-    const prompts: Record<string, string> = {
-      procure: 'Procure $120 OpenAI API tokens for the research fleet',
-      escrow: 'Verify PR #42 and release milestone escrow payout of $350.00',
-      audit: 'Audit all SaaS subscriptions and cancel unused Figma seats',
-      micro: 'Transfer $12.50 to DataScraper Fleet Bot for enriched records',
-    };
-    setCommand(prompts[id] || '');
-    inputRef.current?.focus();
+    const sc = scenarios.find((s) => s.id === id);
+    if (sc) {
+      setCommand(sc.prompt);
+      inputRef.current?.focus();
+    }
+  };
+
+  const handleSaveScenario = (updated: ScenarioItem) => {
+    if (isEditingNew) {
+      setScenarios((prev) => [...prev, { ...updated, id: `custom-${Date.now()}` }]);
+    } else {
+      setScenarios((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+    }
+    setEditingScenario(null);
+    setIsEditingNew(false);
+  };
+
+  const handleOpenNewScenario = () => {
+    setIsEditingNew(true);
+    setEditingScenario({
+      id: `custom-${Date.now()}`,
+      title: 'New Autonomous Task',
+      desc: 'Describe what your AI agent should execute autonomously.',
+      agent: 'ProcureBot AI',
+      tag: 'Orders API',
+      color: 'blue',
+      prompt: 'Procure $75 cloud compute units from AWS',
+    });
+  };
+
+  const handleResetScenarios = () => {
+    setScenarios(INITIAL_SCENARIOS);
   };
 
   const tagColors: Record<string, string> = {
@@ -187,7 +223,7 @@ export const AgentCommandCenter: React.FC<AgentCommandCenterProps> = ({
               <Mic className="w-4 h-4" />
             </button>
             <button
-              onClick={handleExecute}
+              onClick={() => handleExecute()}
               disabled={isExecuting}
               className="flex items-center gap-2 px-6 py-3 bg-brand-500 hover:bg-brand-600 text-white text-xs sm:text-sm font-bold font-display tracking-tight rounded-xl transition-all shadow-sm shadow-brand-500/30 disabled:opacity-60"
             >
@@ -305,17 +341,30 @@ export const AgentCommandCenter: React.FC<AgentCommandCenterProps> = ({
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">Dispatches live requests directly to PayPal developer platform</p>
           </div>
-          <span className="text-xs font-semibold text-brand-600 hover:text-brand-700 cursor-pointer">
-            Explore All 4 Flows →
-          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleOpenNewScenario}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200/60 rounded-xl text-xs font-bold font-display transition-colors shadow-subtle"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>+ Custom Scenario</span>
+            </button>
+            <button
+              onClick={handleResetScenarios}
+              className="p-1.5 bg-slate-50 hover:bg-slate-100 text-slate-500 border border-slate-200 rounded-xl transition-colors"
+              title="Reset to Defaults"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {SCENARIOS.map((s) => (
+          {scenarios.map((s) => (
             <motion.div
               key={s.id}
               whileHover={{ y: -2 }}
-              className="bg-white rounded-2xl border border-slate-200/80 shadow-card p-5 flex flex-col justify-between cursor-pointer hover:shadow-card-hover hover:border-slate-300 transition-all min-h-[170px]"
+              className="bg-white rounded-2xl border border-slate-200/80 shadow-card p-5 flex flex-col justify-between cursor-pointer hover:shadow-card-hover hover:border-slate-300 transition-all min-h-[170px] relative group"
               onClick={() => handleScenario(s.id)}
             >
               <div>
@@ -323,9 +372,22 @@ export const AgentCommandCenter: React.FC<AgentCommandCenterProps> = ({
                   <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl ${iconColors[s.color]}`}>
                     {s.color === 'blue' ? '🤖' : s.color === 'green' ? '🛡️' : s.color === 'amber' ? '⚡' : '🌐'}
                   </div>
-                  <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${tagColors[s.color]}`}>
-                    {s.tag}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${tagColors[s.color]}`}>
+                      {s.tag}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsEditingNew(false);
+                        setEditingScenario(s);
+                      }}
+                      className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+                      title="Edit / Customize Scenario"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
                 <h3 className="text-base font-bold font-display text-slate-900 tracking-tight mb-1.5 leading-snug">
                   {s.title}
@@ -348,6 +410,133 @@ export const AgentCommandCenter: React.FC<AgentCommandCenterProps> = ({
           ))}
         </div>
       </div>
+
+      {/* Edit / Create Scenario Modal */}
+      <AnimatePresence>
+        {editingScenario && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-modal max-w-lg w-full p-6 space-y-4 border border-slate-100"
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div>
+                  <h3 className="text-base font-bold font-display text-slate-900 tracking-tight">
+                    {isEditingNew ? 'Create Custom Autonomous Scenario' : 'Edit Scenario Configuration'}
+                  </h3>
+                  <p className="text-xs text-slate-400">Custom prompt dispatched to Gemini & PayPal sandbox</p>
+                </div>
+                <button
+                  onClick={() => setEditingScenario(null)}
+                  className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3.5 text-xs">
+                <div>
+                  <label className="block text-slate-600 font-semibold mb-1">Scenario Title</label>
+                  <input
+                    type="text"
+                    value={editingScenario.title}
+                    onChange={(e) => setEditingScenario({ ...editingScenario, title: e.target.value })}
+                    placeholder="e.g. Autonomous API Procurement"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-slate-800 text-xs font-medium focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-50"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-600 font-semibold mb-1">AI Execution Prompt (Dispatched to Gemini)</label>
+                  <textarea
+                    rows={2}
+                    value={editingScenario.prompt}
+                    onChange={(e) => setEditingScenario({ ...editingScenario, prompt: e.target.value })}
+                    placeholder='e.g. "Procure $120 OpenAI API tokens for the research fleet"'
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-slate-800 text-xs font-medium focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-50 resize-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-600 font-semibold mb-1">Description / UI Subtitle</label>
+                  <input
+                    type="text"
+                    value={editingScenario.desc}
+                    onChange={(e) => setEditingScenario({ ...editingScenario, desc: e.target.value })}
+                    placeholder="Brief description of what this scenario executes"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-slate-800 text-xs font-medium focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-50"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1">Assigned Agent</label>
+                    <select
+                      value={editingScenario.agent}
+                      onChange={(e) => setEditingScenario({ ...editingScenario, agent: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-slate-800 text-xs font-medium focus:outline-none focus:border-brand-500 bg-white"
+                    >
+                      <option value="ProcureBot AI">ProcureBot AI</option>
+                      <option value="EscrowSentinel">EscrowSentinel</option>
+                      <option value="SubSense Arbiter">SubSense Arbiter</option>
+                      <option value="FleetM2M MicroBot">FleetM2M MicroBot</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1">PayPal API Tag</label>
+                    <select
+                      value={editingScenario.tag}
+                      onChange={(e) => setEditingScenario({ ...editingScenario, tag: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-slate-800 text-xs font-medium focus:outline-none focus:border-brand-500 bg-white"
+                    >
+                      <option value="Orders API">Orders API</option>
+                      <option value="Payouts API">Payouts API</option>
+                      <option value="Subscriptions API">Subscriptions API</option>
+                      <option value="M2M Transfer">M2M Transfer</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-slate-600 font-semibold mb-1.5">Color Accent</label>
+                  <div className="flex items-center gap-3">
+                    {(['blue', 'green', 'amber', 'purple'] as const).map((col) => (
+                      <button
+                        key={col}
+                        type="button"
+                        onClick={() => setEditingScenario({ ...editingScenario, color: col })}
+                        className={`w-7 h-7 rounded-lg flex items-center justify-center border-2 transition-transform ${
+                          editingScenario.color === col ? 'scale-110 border-slate-900 shadow-sm' : 'border-transparent opacity-70'
+                        } ${
+                          col === 'blue' ? 'bg-blue-500' : col === 'green' ? 'bg-emerald-500' : col === 'amber' ? 'bg-amber-500' : 'bg-purple-500'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-2.5 pt-3 border-t border-slate-100">
+                <button
+                  onClick={() => setEditingScenario(null)}
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold font-display rounded-xl text-xs transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleSaveScenario(editingScenario)}
+                  className="flex-1 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-bold font-display rounded-xl text-xs transition-colors shadow-sm shadow-brand-500/20"
+                >
+                  Save Scenario
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
