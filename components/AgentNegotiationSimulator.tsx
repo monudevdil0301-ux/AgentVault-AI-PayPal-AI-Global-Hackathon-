@@ -57,6 +57,9 @@ export const AgentNegotiationSimulator: React.FC<AgentNegotiationSimulatorProps>
     setIsFetchingQuote(false);
   };
 
+  const [isOrdering, setIsOrdering] = useState(false);
+  const [orderComplete, setOrderComplete] = useState(false);
+
   const startNegotiation = async () => {
     const budget = Number(customBudget) || 100;
     const ask = Number(customAsk) || 120;
@@ -67,6 +70,7 @@ export const AgentNegotiationSimulator: React.FC<AgentNegotiationSimulatorProps>
     setDealClosed(false);
     setFinalPrice(null);
     setRealPayPalOrderId(null);
+    setOrderComplete(false);
 
     const openOffer = Math.max(1, Math.round(budget * 0.75));
     const vendorCounter = Math.max(openOffer + 1, Math.round(ask * 0.90));
@@ -76,7 +80,7 @@ export const AgentNegotiationSimulator: React.FC<AgentNegotiationSimulatorProps>
       { sender: 'ProcureBot AI', text: `Initiating buy order for ${label}. Max user envelope: $${budget}.00 USD. Opening offer: $${openOffer}.00 USD.`, price: openOffer },
       { sender: 'VendorAgent', text: `Counter-offer received. Current live spot ask is $${ask}.00 USD. Can offer volume discount down to $${vendorCounter}.00 USD.`, price: vendorCounter },
       { sender: 'ProcureBot AI', text: `Analyzing market comps & policy constraints... Best alternative equilibrium is $${settled}.00 USD. Proposing firm settlement at $${settled}.00 USD.`, price: settled },
-      { sender: 'VendorAgent', text: `Settlement terms accepted at $${settled}.00 USD. Dispatching payload to PayPal Orders API v2 for immediate sandbox vault capture.`, price: settled },
+      { sender: 'VendorAgent', text: `Settlement terms accepted at $${settled}.00 USD. Ready for buyer payment authorization.`, price: settled },
     ];
 
     for (let i = 0; i < steps.length; i++) {
@@ -85,9 +89,18 @@ export const AgentNegotiationSimulator: React.FC<AgentNegotiationSimulatorProps>
     }
 
     setFinalPrice(settled);
+    setDealClosed(true);
+    setIsSimulating(false);
+  };
 
-    // Call Real PayPal Sandbox Orders API v2
+  const handleExecutePayPalOrder = async () => {
+    if (!finalPrice || isOrdering) return;
+    setIsOrdering(true);
+
+    const label = customLabel || selectedScenario.label;
+    const settled = finalPrice;
     let liveOrderId = `PAYPAL-M2M-${Date.now().toString().slice(-6)}`;
+
     try {
       const orderRes = await fetch('/api/paypal/create-order', {
         method: 'POST',
@@ -109,8 +122,8 @@ export const AgentNegotiationSimulator: React.FC<AgentNegotiationSimulatorProps>
     }
 
     setRealPayPalOrderId(liveOrderId);
-    setDealClosed(true);
-    setIsSimulating(false);
+    setOrderComplete(true);
+    setIsOrdering(false);
 
     const tx: TransactionRecord = {
       id: `TX-M2M-${Date.now().toString().slice(-4)}`,
@@ -124,14 +137,12 @@ export const AgentNegotiationSimulator: React.FC<AgentNegotiationSimulatorProps>
       status: 'COMPLETED',
       type: 'M2M_TRANSFER',
       riskScore: 'LOW',
-      rationale: `Autonomous P2P price discovery: settled at $${settled}.00 USD (Saved $${Math.max(0, ask - settled)}.00 below live vendor quote of $${ask}.00). Captured via PayPal Orders v2.`,
+      rationale: `Autonomous P2P price discovery: settled at $${settled}.00 USD (Saved $${Math.max(0, customAsk - settled)}.00 below ask). Captured via PayPal Orders v2.`,
       aiConfidence: 0.98,
       paypalOrderId: liveOrderId,
       chainOfThought: [
-        `Live vendor spot quote: $${ask}.00 USD`,
-        `User envelope limit: $${budget}.00 USD`,
-        `ProcureBot opened at $${openOffer}.00 USD`,
-        `VendorAgent countered at $${vendorCounter}.00 USD`,
+        `Live vendor spot quote: $${customAsk}.00 USD`,
+        `User envelope limit: $${customBudget}.00 USD`,
         `Settled at market equilibrium: $${settled}.00 USD`,
         `Executed live PayPal Sandbox Order: ${liveOrderId}`,
       ],
@@ -310,24 +321,64 @@ export const AgentNegotiationSimulator: React.FC<AgentNegotiationSimulatorProps>
         <motion.div
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-emerald-50 border border-emerald-200/80 rounded-2xl p-4 flex items-center justify-between"
+          className={`rounded-2xl p-4.5 border transition-all ${
+            orderComplete 
+              ? 'bg-emerald-50 border-emerald-200/90' 
+              : 'bg-gradient-to-r from-purple-50 via-blue-50 to-indigo-50 border-purple-200/80 shadow-card'
+          }`}
         >
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-100/80 flex items-center justify-center text-emerald-700">
-              <CheckCircle2 className="w-5 h-5" />
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                orderComplete ? 'bg-emerald-100 text-emerald-700' : 'bg-purple-100 text-purple-700'
+              }`}>
+                {orderComplete ? <CheckCircle2 className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
+              </div>
+              <div>
+                <p className="text-xs font-bold font-display text-slate-900 flex items-center gap-2">
+                  <span>{orderComplete ? 'PayPal Sandbox Order Captured & Settled' : 'P2P Agreement Reached: Ready to Order'}</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/80 border border-slate-200 text-purple-700 font-mono">
+                    ${finalPrice}.00 USD
+                  </span>
+                </p>
+                <p className="text-[11px] text-slate-600 mt-0.5">
+                  Saved <strong className="text-emerald-700 font-bold">${Math.max(0, customAsk - finalPrice)}.00 USD</strong> ({(100 - (finalPrice / customAsk) * 100).toFixed(0)}% below vendor ask)
+                  {orderComplete && realPayPalOrderId && (
+                    <span> • PayPal Order ID: <strong className="font-mono font-bold text-brand-700">{realPayPalOrderId}</strong></span>
+                  )}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs font-bold font-display text-emerald-900">
-                P2P Deal Closed & Live PayPal Sandbox Order Captured
-              </p>
-              <p className="text-[11px] text-emerald-700 mt-0.5">
-                Saved <strong className="font-bold">${selectedScenario.asks - finalPrice}.00 USD</strong> ({(100 - (finalPrice / selectedScenario.asks) * 100).toFixed(0)}% below vendor ask) • PayPal Order: <span className="font-mono font-bold">{realPayPalOrderId}</span>
-              </p>
+
+            <div className="flex items-center gap-2.5">
+              {!orderComplete ? (
+                <button
+                  onClick={handleExecutePayPalOrder}
+                  disabled={isOrdering}
+                  className="px-5 py-2.5 bg-gradient-to-r from-brand-600 to-blue-600 hover:from-brand-700 hover:to-blue-700 text-white text-xs font-bold font-display rounded-xl flex items-center gap-2 shadow-sm shadow-brand-500/25 transition-all disabled:opacity-50"
+                >
+                  {isOrdering ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Capturing PayPal Order...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>💳 Order via PayPal Now (${finalPrice}.00)</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </>
+                  )}
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-emerald-800 bg-emerald-100/90 px-3 py-1.5 rounded-xl border border-emerald-200 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Settled on PayPal Sandbox</span>
+                  </span>
+                </div>
+              )}
             </div>
           </div>
-          <span className="text-lg font-black font-display text-emerald-900 tracking-tight">
-            ${finalPrice}.00 USD
-          </span>
         </motion.div>
       )}
     </div>
