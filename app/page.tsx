@@ -13,6 +13,8 @@ import { FleetGuardrailsWidget } from '@/components/FleetGuardrailsWidget';
 import { PayPalNetworkHealthWidget } from '@/components/PayPalNetworkHealthWidget';
 import { PayPalTopupModal } from '@/components/PayPalTopupModal';
 import { SettingsModal } from '@/components/SettingsModal';
+import { PayPalWebhookStreamer } from '@/components/PayPalWebhookStreamer';
+import { soundFx } from '@/lib/audio';
 import { 
   INITIAL_AGENTS, 
   INITIAL_TRANSACTIONS, 
@@ -37,6 +39,7 @@ export default function Home() {
   // Modals & Config
   const [isTopupOpen, setIsTopupOpen] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [isSwarmRunning, setIsSwarmRunning] = useState<boolean>(false);
   const [paypalClientId, setPaypalClientId] = useState<string>('');
   const [paypalSecret, setPaypalSecret] = useState<string>('');
   const [geminiKey, setGeminiKey] = useState<string>('');
@@ -348,6 +351,71 @@ export default function Home() {
     }
   };
 
+  // Swarm Burst: Concurrent 10-Agent Autonomous Stress Test
+  const handleRunSwarmBurst = async () => {
+    if (isSwarmRunning) return;
+    setIsSwarmRunning(true);
+    soundFx.playAgentPulse();
+
+    const burstEvents = [
+      { agent: 'ProcureBot AI', merchant: 'Cloudflare Worker Egress', amount: 8.40, category: 'Edge Compute' },
+      { agent: 'DataScraper Fleet', merchant: 'Bloomberg S3 Feed', amount: 32.50, category: 'Market Data' },
+      { agent: 'LLM Proxy Cache', merchant: 'Redis Cloud Cluster', amount: 14.20, category: 'Memory Cache' },
+      { agent: 'ProcureBot AI', merchant: 'Together AI (Llama 3.3)', amount: 19.80, category: 'LLM Inference' },
+      { agent: 'FleetM2M MicroBot', merchant: 'MaxMind GeoIP API', amount: 4.50, category: 'Micro-settlement' },
+      { agent: 'EscrowSentinel', merchant: 'Snyk Security Scan API', amount: 24.00, category: 'DevSecOps' },
+      { agent: 'SubSense Arbiter', merchant: 'Notion Team Workspace', amount: 48.00, category: 'SaaS Audit' },
+      { agent: 'FleetM2M MicroBot', merchant: 'ZeroBounce Verification', amount: 6.20, category: 'Data Scrubbing' },
+      { agent: 'ProcureBot AI', merchant: 'Pinecone Vector DB', amount: 38.00, category: 'Vector Search' },
+      { agent: 'FleetM2M MicroBot', merchant: 'Supabase Quota Scale', amount: 11.50, category: 'Object Storage' },
+    ];
+
+    for (let i = 0; i < burstEvents.length; i++) {
+      const b = burstEvents[i];
+      await new Promise((r) => setTimeout(r, 260));
+      soundFx.playAgentPulse();
+
+      const newTx: TransactionRecord = {
+        id: `TX-SWRM-${Date.now().toString().slice(-4)}-${i + 1}`,
+        timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
+        agentId: 'agent-procure',
+        agentName: b.agent,
+        merchant: b.merchant,
+        amount: b.amount,
+        currency: 'USD',
+        category: b.category,
+        status: 'COMPLETED',
+        type: 'M2M_TRANSFER',
+        riskScore: 'LOW',
+        rationale: `Swarm Burst: Autonomous settlement via PayPal Orders v2 for ${b.merchant}. Policy verified.`,
+        aiConfidence: 0.99,
+        paypalOrderId: `PAYPAL-SWRM-${Math.floor(100000 + Math.random() * 900000)}`,
+        chainOfThought: [
+          `Agent ${b.agent} queried vendor ${b.merchant}`,
+          `Autonomous spending envelope approved: $${b.amount.toFixed(2)} USD`,
+          `Captured via PayPal Orders v2 engine`,
+        ],
+      };
+
+      setTransactions((prev) => [newTx, ...prev]);
+      handleUpdateAgentBalance('agent-procure', b.amount);
+      setLogs((prev) => [
+        {
+          id: `LOG-SWRM-${Date.now()}-${i}`,
+          timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
+          agent: b.agent,
+          event: 'Swarm Settlement',
+          details: `Settled $${b.amount.toFixed(2)} USD with ${b.merchant} (PayPal: ${newTx.paypalOrderId})`,
+          badgeType: 'success',
+        },
+        ...prev,
+      ]);
+    }
+
+    soundFx.playPaymentSuccess();
+    setIsSwarmRunning(false);
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-[#f5f7fa] text-gray-900">
       {/* Navbar */}
@@ -384,6 +452,8 @@ export default function Home() {
                   apiKey={geminiKey}
                   paypalClientId={paypalClientId}
                   paypalSecret={paypalSecret}
+                  onRunSwarmBurst={handleRunSwarmBurst}
+                  isSwarmRunning={isSwarmRunning}
                 />
               </div>
 
@@ -463,6 +533,9 @@ export default function Home() {
           setGeminiKey(gkey);
         }}
       />
+
+      {/* Real-time PayPal Webhook Streamer & HMAC Verification Drawer */}
+      <PayPalWebhookStreamer />
     </div>
   );
 }

@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Settings, Plus, Play, Sparkles } from 'lucide-react';
+import { Settings, Plus, Play, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import { SandboxProfilePill } from './SandboxProfilePill';
+import { soundFx } from '@/lib/audio';
 
 interface NavbarProps {
   activeTab: string;
@@ -32,6 +33,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   onRunJudgeTour,
   isTourRunning,
 }) => {
+  const [soundEnabled, setSoundEnabled] = useState(true);
+
+  const toggleSound = () => {
+    const next = !soundEnabled;
+    setSoundEnabled(next);
+    soundFx.enabled = next;
+    if (next) soundFx.playPaymentSuccess();
+  };
   return (
     <nav className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-subtle">
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between h-16">
@@ -120,6 +129,20 @@ export const Navbar: React.FC<NavbarProps> = ({
             title="Add Sandbox Liquidity"
           >
             <Plus className="w-4 h-4" />
+          </motion.button>
+
+          <motion.button
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
+            onClick={toggleSound}
+            className={`w-8 h-8 rounded-lg border flex items-center justify-center transition-colors ${
+              soundEnabled
+                ? 'bg-slate-100 text-slate-600 border-slate-200/70 hover:bg-slate-200/70 hover:text-slate-900'
+                : 'bg-rose-50 text-rose-500 border-rose-200 hover:bg-rose-100'
+            }`}
+            title={soundEnabled ? 'Fintech Sound Effects: Enabled' : 'Fintech Sound Effects: Muted'}
+          >
+            {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
           </motion.button>
 
           <motion.button

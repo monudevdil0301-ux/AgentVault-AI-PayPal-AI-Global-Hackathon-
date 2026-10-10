@@ -5,8 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AgGridReact } from 'ag-grid-react';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-quartz.css';
-import { Download, Eye, X, Filter } from 'lucide-react';
+import { Download, Eye, X, Filter, ShieldCheck, FileCheck } from 'lucide-react';
 import { TransactionRecord } from '@/lib/store';
+import { AuditReceiptModal } from './AuditReceiptModal';
+import { soundFx } from '@/lib/audio';
 
 interface AGGridLedgerProps {
   transactions: TransactionRecord[];
@@ -21,6 +23,7 @@ export const AGGridLedger: React.FC<AGGridLedgerProps> = ({
   const [selectedTx, setSelectedTx] = useState<TransactionRecord | null>(null);
   const [modalTab, setModalTab] = useState<'summary' | 'payload'>('summary');
   const [filter, setFilter] = useState<string>('ALL');
+  const [viewingCertForTx, setViewingCertForTx] = useState<TransactionRecord | null>(null);
 
   const filtered = useMemo(() => {
     if (filter === 'ALL') return transactions;
@@ -103,14 +106,23 @@ export const AGGridLedger: React.FC<AGGridLedgerProps> = ({
     },
     { 
       headerName: 'Actions', 
-      width: 90, 
+      width: 175, 
       cellRenderer: (p: any) => (
-        <button 
-          onClick={() => setSelectedTx(p.data)} 
-          className="text-brand-600 hover:text-brand-700 text-xs font-bold font-display flex items-center gap-1 transition-colors"
-        >
-          <Eye className="w-3.5 h-3.5" /> Details
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => { soundFx.playClick(); setSelectedTx(p.data); }} 
+            className="text-brand-600 hover:text-brand-700 text-xs font-bold font-display flex items-center gap-1 transition-colors"
+          >
+            <Eye className="w-3.5 h-3.5" /> Details
+          </button>
+          <button 
+            onClick={() => { soundFx.playClick(); setViewingCertForTx(p.data); }} 
+            className="text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100/80 px-2 py-0.5 rounded-md border border-emerald-200/60 text-[11px] font-bold font-display flex items-center gap-1 transition-colors"
+            title="Download / View Cryptographic Proof Certificate"
+          >
+            <ShieldCheck className="w-3 h-3" /> Proof
+          </button>
+        </div>
       )
     },
   ], []);
@@ -303,28 +315,53 @@ export const AGGridLedger: React.FC<AGGridLedgerProps> = ({
                 </div>
               )}
 
-              <div className="flex gap-2.5 pt-3 border-t border-slate-100">
+              {/* Modal Actions */}
+              <div className="pt-2">
+                <button
+                  onClick={() => {
+                    const tx = selectedTx;
+                    setSelectedTx(null);
+                    setViewingCertForTx(tx);
+                  }}
+                  className="w-full flex items-center justify-center gap-1.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 rounded-xl text-xs font-bold font-display transition-colors"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>View Cryptographic Proof Certificate</span>
+                </button>
+              </div>
+
+              <div className="flex gap-2.5 pt-2 border-t border-slate-100">
                 <button
                   onClick={() => { onApproveTransaction(selectedTx.id); setSelectedTx(null); }}
-                  className="flex-1 py-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200/80 rounded-xl text-xs font-bold font-display hover:bg-emerald-100 transition-colors"
+                  className="flex-1 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200/80 rounded-xl text-xs font-bold font-display hover:bg-emerald-100 transition-colors"
                 >
                   Confirm Settlement
                 </button>
                 <button
                   onClick={() => { onDisputeTransaction(selectedTx.id); setSelectedTx(null); }}
-                  className="flex-1 py-2.5 bg-rose-50 text-rose-700 border border-rose-200/80 rounded-xl text-xs font-bold font-display hover:bg-rose-100 transition-colors"
+                  className="flex-1 py-2 bg-rose-50 text-rose-700 border border-rose-200/80 rounded-xl text-xs font-bold font-display hover:bg-rose-100 transition-colors"
                 >
                   File Dispute
                 </button>
                 <button
                   onClick={() => { onRefundTransaction(selectedTx.id); setSelectedTx(null); }}
-                  className="flex-1 py-2.5 bg-slate-100 text-slate-600 border border-slate-200/80 rounded-xl text-xs font-bold font-display hover:bg-slate-200 transition-colors"
+                  className="flex-1 py-2 bg-slate-100 text-slate-600 border border-slate-200/80 rounded-xl text-xs font-bold font-display hover:bg-slate-200 transition-colors"
                 >
                   Initiate Refund
                 </button>
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Cryptographic Compliance Certificate */}
+      <AnimatePresence>
+        {viewingCertForTx && (
+          <AuditReceiptModal
+            transaction={viewingCertForTx}
+            onClose={() => setViewingCertForTx(null)}
+          />
         )}
       </AnimatePresence>
     </div>

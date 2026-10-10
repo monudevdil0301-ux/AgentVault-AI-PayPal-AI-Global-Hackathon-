@@ -2,8 +2,9 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bot, ArrowRight, CheckCircle2, RotateCcw, Loader2, Sparkles, ShieldCheck } from 'lucide-react';
+import { Bot, ArrowRight, CheckCircle2, RotateCcw, Loader2, Sparkles, ShieldCheck, Globe } from 'lucide-react';
 import { TransactionRecord } from '@/lib/store';
+import { soundFx } from '@/lib/audio';
 
 interface AgentNegotiationSimulatorProps {
   onNewTransaction: (tx: TransactionRecord) => void;
@@ -19,6 +20,13 @@ const SCENARIOS = [
   { id: 'api', label: 'Bulk API Proxy Gateway', budget: 95, asks: 130, desc: 'Enterprise rate-limited egress proxy endpoints' },
 ];
 
+const CURRENCIES = [
+  { code: 'USD', symbol: '$', name: 'US Dollar' },
+  { code: 'EUR', symbol: '€', name: 'Euro' },
+  { code: 'GBP', symbol: '£', name: 'British Pound' },
+  { code: 'JPY', symbol: '¥', name: 'Japanese Yen' },
+];
+
 export const AgentNegotiationSimulator: React.FC<AgentNegotiationSimulatorProps> = ({
   onNewTransaction,
   onUpdateAgentBalance,
@@ -26,6 +34,7 @@ export const AgentNegotiationSimulator: React.FC<AgentNegotiationSimulatorProps>
   paypalSecret,
   apiKey,
 }) => {
+  const [selectedCurrency, setSelectedCurrency] = useState('USD');
   const [selectedScenario, setSelectedScenario] = useState(SCENARIOS[0]);
   const [customBudget, setCustomBudget] = useState<number>(SCENARIOS[0].budget);
   const [customAsk, setCustomAsk] = useState<number>(SCENARIOS[0].asks);
@@ -72,18 +81,20 @@ export const AgentNegotiationSimulator: React.FC<AgentNegotiationSimulatorProps>
     setRealPayPalOrderId(null);
     setOrderComplete(false);
 
+    const currSymbol = CURRENCIES.find((c) => c.code === selectedCurrency)?.symbol || '$';
     const openOffer = Math.max(1, Math.round(budget * 0.75));
     const vendorCounter = Math.max(openOffer + 1, Math.round(ask * 0.90));
     const settled = Math.max(1, Math.round((budget * 0.6) + (vendorCounter * 0.4)));
 
     const steps = [
-      { sender: 'ProcureBot AI', text: `Initiating buy order for ${label}. Max user envelope: $${budget}.00 USD. Opening offer: $${openOffer}.00 USD.`, price: openOffer },
-      { sender: 'VendorAgent', text: `Counter-offer received. Current live spot ask is $${ask}.00 USD. Can offer volume discount down to $${vendorCounter}.00 USD.`, price: vendorCounter },
-      { sender: 'ProcureBot AI', text: `Analyzing market comps & policy constraints... Best alternative equilibrium is $${settled}.00 USD. Proposing firm settlement at $${settled}.00 USD.`, price: settled },
-      { sender: 'VendorAgent', text: `Settlement terms accepted at $${settled}.00 USD. Ready for buyer payment authorization.`, price: settled },
+      { sender: 'ProcureBot AI', text: `Initiating buy order for ${label}. Max envelope: ${currSymbol}${budget}.00 ${selectedCurrency}. Opening offer: ${currSymbol}${openOffer}.00 ${selectedCurrency}.`, price: openOffer },
+      { sender: 'VendorAgent', text: `Counter-offer received. Current spot ask: ${currSymbol}${ask}.00 ${selectedCurrency}. Can offer volume discount to ${currSymbol}${vendorCounter}.00 ${selectedCurrency}.`, price: vendorCounter },
+      { sender: 'ProcureBot AI', text: `Analyzing cross-border FX & market comps... Best alternative equilibrium is ${currSymbol}${settled}.00 ${selectedCurrency}. Proposing firm settlement at ${currSymbol}${settled}.00 ${selectedCurrency}.`, price: settled },
+      { sender: 'VendorAgent', text: `Settlement terms accepted at ${currSymbol}${settled}.00 ${selectedCurrency}. Ready for buyer authorization.`, price: settled },
     ];
 
     for (let i = 0; i < steps.length; i++) {
+      soundFx.playAgentPulse();
       await new Promise((r) => setTimeout(r, 650));
       setMessages((prev) => [...prev, steps[i]]);
     }
@@ -91,12 +102,15 @@ export const AgentNegotiationSimulator: React.FC<AgentNegotiationSimulatorProps>
     setFinalPrice(settled);
     setDealClosed(true);
     setIsSimulating(false);
+    soundFx.playPaymentSuccess();
   };
 
   const handleExecutePayPalOrder = async () => {
     if (!finalPrice || isOrdering) return;
     setIsOrdering(true);
+    soundFx.playAgentPulse();
 
+    const currSymbol = CURRENCIES.find((c) => c.code === selectedCurrency)?.symbol || '$';
     const label = customLabel || selectedScenario.label;
     const settled = finalPrice;
     let liveOrderId = `PAYPAL-M2M-${Date.now().toString().slice(-6)}`;
@@ -107,8 +121,8 @@ export const AgentNegotiationSimulator: React.FC<AgentNegotiationSimulatorProps>
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount: settled,
-          currency: 'USD',
-          description: `M2M Autonomous Settlement: ${label} ($${settled}.00 USD)`,
+          currency: selectedCurrency,
+          description: `M2M Autonomous Settlement: ${label} (${currSymbol}${settled}.00 ${selectedCurrency})`,
           clientId: paypalClientId,
           clientSecret: paypalSecret,
         }),
@@ -124,6 +138,7 @@ export const AgentNegotiationSimulator: React.FC<AgentNegotiationSimulatorProps>
     setRealPayPalOrderId(liveOrderId);
     setOrderComplete(true);
     setIsOrdering(false);
+    soundFx.playPaymentSuccess();
 
     const tx: TransactionRecord = {
       id: `TX-M2M-${Date.now().toString().slice(-4)}`,
@@ -132,18 +147,18 @@ export const AgentNegotiationSimulator: React.FC<AgentNegotiationSimulatorProps>
       agentName: 'ProcureBot AI',
       merchant: `VendorAgent (${label})`,
       amount: settled,
-      currency: 'USD',
+      currency: selectedCurrency,
       category: 'M2M Settlement',
       status: 'COMPLETED',
       type: 'M2M_TRANSFER',
       riskScore: 'LOW',
-      rationale: `Autonomous P2P price discovery: settled at $${settled}.00 USD (Saved $${Math.max(0, customAsk - settled)}.00 below ask). Captured via PayPal Orders v2.`,
+      rationale: `Autonomous cross-border price discovery: settled at ${currSymbol}${settled}.00 ${selectedCurrency} (Saved ${currSymbol}${Math.max(0, customAsk - settled)}.00 below ask). Captured via PayPal Orders v2.`,
       aiConfidence: 0.98,
       paypalOrderId: liveOrderId,
       chainOfThought: [
-        `Live vendor spot quote: $${customAsk}.00 USD`,
-        `User envelope limit: $${customBudget}.00 USD`,
-        `Settled at market equilibrium: $${settled}.00 USD`,
+        `Live vendor spot quote: ${currSymbol}${customAsk}.00 ${selectedCurrency}`,
+        `User envelope limit: ${currSymbol}${customBudget}.00 ${selectedCurrency}`,
+        `Settled at market equilibrium: ${currSymbol}${settled}.00 ${selectedCurrency}`,
         `Executed live PayPal Sandbox Order: ${liveOrderId}`,
       ],
     };
@@ -171,21 +186,49 @@ export const AgentNegotiationSimulator: React.FC<AgentNegotiationSimulatorProps>
           </div>
         </div>
 
-        {/* Quick Presets */}
-        <div className="flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-xl border border-slate-200/60">
-          {SCENARIOS.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => handleSelectScenario(s)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold tracking-normal transition-all ${
-                selectedScenario.id === s.id
-                  ? 'bg-white text-slate-900 shadow-sm font-bold'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              {s.label}
-            </button>
-          ))}
+        {/* Controls: Currency + Quick Presets */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Currency Switcher */}
+          <div className="flex items-center gap-1 bg-slate-100/90 p-1 rounded-xl border border-slate-200/70">
+            <Globe className="w-3.5 h-3.5 text-slate-400 ml-1.5 mr-0.5" />
+            {CURRENCIES.map((c) => (
+              <button
+                key={c.code}
+                onClick={() => {
+                  soundFx.playClick();
+                  setSelectedCurrency(c.code);
+                }}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                  selectedCurrency === c.code
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                title={c.name}
+              >
+                {c.symbol} {c.code}
+              </button>
+            ))}
+          </div>
+
+          {/* Quick Presets */}
+          <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/60">
+            {SCENARIOS.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => {
+                  soundFx.playClick();
+                  handleSelectScenario(s);
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold tracking-normal transition-all ${
+                  selectedScenario.id === s.id
+                    ? 'bg-white text-slate-900 shadow-sm font-bold'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -225,7 +268,7 @@ export const AgentNegotiationSimulator: React.FC<AgentNegotiationSimulatorProps>
             </div>
             <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-100/90 border border-slate-200/80 text-xs">
               <span className="font-extrabold font-display text-slate-900 text-sm tracking-tight">
-                ${customAsk}.00 USD
+                {CURRENCIES.find((c) => c.code === selectedCurrency)?.symbol || '$'}{customAsk}.00 {selectedCurrency}
               </span>
               <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-full flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -245,7 +288,9 @@ export const AgentNegotiationSimulator: React.FC<AgentNegotiationSimulatorProps>
               </span>
             </div>
             <div className="relative">
-              <span className="absolute left-3 top-2 text-xs font-bold text-slate-400">$</span>
+              <span className="absolute left-3 top-2 text-xs font-bold text-slate-400">
+                {CURRENCIES.find((c) => c.code === selectedCurrency)?.symbol || '$'}
+              </span>
               <input
                 type="number"
                 value={customBudget}
@@ -259,7 +304,7 @@ export const AgentNegotiationSimulator: React.FC<AgentNegotiationSimulatorProps>
 
         <div className="flex items-center justify-between pt-2.5 border-t border-slate-200/60 flex-wrap gap-2">
           <p className="text-[11px] text-slate-500">
-            Vendor quotes <strong className="text-slate-800 font-bold">${customAsk}.00</strong> • You authorized up to <strong className="text-brand-700 font-bold">${customBudget}.00</strong>. AI agents negotiate settlement.
+            Vendor quotes <strong className="text-slate-800 font-bold">{CURRENCIES.find((c) => c.code === selectedCurrency)?.symbol || '$'}{customAsk}.00 {selectedCurrency}</strong> • You authorized up to <strong className="text-brand-700 font-bold">{CURRENCIES.find((c) => c.code === selectedCurrency)?.symbol || '$'}{customBudget}.00 {selectedCurrency}</strong>.
           </p>
           <button
             onClick={startNegotiation}
@@ -273,7 +318,7 @@ export const AgentNegotiationSimulator: React.FC<AgentNegotiationSimulatorProps>
               </>
             ) : (
               <>
-                <span>Run P2P Negotiation</span>
+                <span>Run Cross-Border Negotiation</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </>
             )}
@@ -338,11 +383,11 @@ export const AgentNegotiationSimulator: React.FC<AgentNegotiationSimulatorProps>
                 <p className="text-xs font-bold font-display text-slate-900 flex items-center gap-2">
                   <span>{orderComplete ? 'PayPal Sandbox Order Captured & Settled' : 'P2P Agreement Reached: Ready to Order'}</span>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/80 border border-slate-200 text-purple-700 font-mono">
-                    ${finalPrice}.00 USD
+                    {CURRENCIES.find((c) => c.code === selectedCurrency)?.symbol || '$'}{finalPrice}.00 {selectedCurrency}
                   </span>
                 </p>
                 <p className="text-[11px] text-slate-600 mt-0.5">
-                  Saved <strong className="text-emerald-700 font-bold">${Math.max(0, customAsk - finalPrice)}.00 USD</strong> ({(100 - (finalPrice / customAsk) * 100).toFixed(0)}% below vendor ask)
+                  Saved <strong className="text-emerald-700 font-bold">{CURRENCIES.find((c) => c.code === selectedCurrency)?.symbol || '$'}{Math.max(0, customAsk - finalPrice)}.00 {selectedCurrency}</strong> ({(100 - (finalPrice / customAsk) * 100).toFixed(0)}% below vendor ask)
                   {orderComplete && realPayPalOrderId && (
                     <span> • PayPal Order ID: <strong className="font-mono font-bold text-brand-700">{realPayPalOrderId}</strong></span>
                   )}
@@ -364,7 +409,7 @@ export const AgentNegotiationSimulator: React.FC<AgentNegotiationSimulatorProps>
                     </>
                   ) : (
                     <>
-                      <span>💳 Order via PayPal Now (${finalPrice}.00)</span>
+                      <span>💳 Order via PayPal Now ({CURRENCIES.find((c) => c.code === selectedCurrency)?.symbol || '$'}{finalPrice}.00 {selectedCurrency})</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </>
                   )}

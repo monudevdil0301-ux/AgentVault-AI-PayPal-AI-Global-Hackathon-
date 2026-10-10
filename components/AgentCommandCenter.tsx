@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Mic, Bot, ChevronRight, Loader2, Sparkles, CheckCircle2, AlertCircle, Edit3, Plus, X, RotateCcw } from 'lucide-react';
+import { Send, Mic, Bot, ChevronRight, Loader2, Sparkles, CheckCircle2, AlertCircle, Edit3, Plus, X, RotateCcw, Zap } from 'lucide-react';
 import { AgentWallet, TransactionRecord, EscrowMilestone, SubscriptionItem } from '@/lib/store';
+import { soundFx } from '@/lib/audio';
 
 export interface ScenarioItem {
   id: string;
@@ -25,6 +26,8 @@ interface AgentCommandCenterProps {
   apiKey: string;
   paypalClientId: string;
   paypalSecret: string;
+  onRunSwarmBurst?: () => void;
+  isSwarmRunning?: boolean;
 }
 
 const INITIAL_SCENARIOS: ScenarioItem[] = [
@@ -38,6 +41,7 @@ export const AgentCommandCenter: React.FC<AgentCommandCenterProps> = ({
   agents, subscriptions, contracts, transactions,
   onNewTransaction, onUpdateAgentBalance, onUpdateEscrowStatus, onCancelSubscription,
   apiKey, paypalClientId, paypalSecret,
+  onRunSwarmBurst, isSwarmRunning,
 }) => {
   const [scenarios, setScenarios] = useState<ScenarioItem[]>(INITIAL_SCENARIOS);
   const [editingScenario, setEditingScenario] = useState<ScenarioItem | null>(null);
@@ -341,16 +345,42 @@ export const AgentCommandCenter: React.FC<AgentCommandCenterProps> = ({
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">Dispatches live requests directly to PayPal developer platform</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {onRunSwarmBurst && (
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => {
+                  soundFx.playClick();
+                  onRunSwarmBurst();
+                }}
+                disabled={isSwarmRunning}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold font-display transition-all ${
+                  isSwarmRunning
+                    ? 'bg-purple-100 text-purple-800 border border-purple-300 animate-pulse'
+                    : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-sm shadow-purple-500/25'
+                }`}
+                title="Concurrently execute 10 multi-agent PayPal settlements to stress test fleet guardrails"
+              >
+                <Zap className={`w-3.5 h-3.5 ${isSwarmRunning ? 'animate-spin' : ''}`} />
+                <span>{isSwarmRunning ? 'Swarm Burst Running (10/10)...' : '⚡ Simulate Swarm Burst (10 Agents)'}</span>
+              </motion.button>
+            )}
             <button
-              onClick={handleOpenNewScenario}
+              onClick={() => {
+                soundFx.playClick();
+                handleOpenNewScenario();
+              }}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200/60 rounded-xl text-xs font-bold font-display transition-colors shadow-subtle"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>+ Custom Scenario</span>
             </button>
             <button
-              onClick={handleResetScenarios}
+              onClick={() => {
+                soundFx.playClick();
+                handleResetScenarios();
+              }}
               className="p-1.5 bg-slate-50 hover:bg-slate-100 text-slate-500 border border-slate-200 rounded-xl transition-colors"
               title="Reset to Defaults"
             >
