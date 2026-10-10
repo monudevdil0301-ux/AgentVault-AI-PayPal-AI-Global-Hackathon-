@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Settings, Plus, Play, Sparkles } from 'lucide-react';
+import { SandboxProfilePill } from './SandboxProfilePill';
 
 interface NavbarProps {
   activeTab: string;
@@ -78,7 +79,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Right */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           {onRunJudgeTour && (
             <motion.button
               whileHover={{ scale: 1.03 }}
@@ -98,17 +99,19 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
 
           {isSandboxMode && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200/70">
+            <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200/70">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               <span className="text-xs font-semibold text-emerald-700 tracking-tight">Sandbox Live</span>
             </div>
           )}
-          <div className="text-right">
+
+          <div className="text-right hidden sm:block">
             <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Total Value</div>
             <div className="text-base font-extrabold font-display text-slate-900 tracking-tight">
               ${totalTreasury.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </div>
           </div>
+
           <motion.button
             whileHover={{ scale: 1.04 }}
             whileTap={{ scale: 0.96 }}
@@ -118,6 +121,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <Plus className="w-4 h-4" />
           </motion.button>
+
           <motion.button
             whileHover={{ scale: 1.04 }}
             whileTap={{ scale: 0.96 }}
@@ -127,6 +131,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <Settings className="w-4 h-4" />
           </motion.button>
+
+          {/* Sandbox Profile & Role Switcher */}
+          <SandboxProfilePill onOpenSettings={onOpenSettings} />
         </div>
       </div>
     </nav>
