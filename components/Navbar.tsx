@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Settings, Plus, Play, Sparkles, Volume2, VolumeX } from 'lucide-react';
+import { Settings, Plus, Play, Sparkles, Volume2, VolumeX, Award } from 'lucide-react';
 import { SandboxProfilePill } from './SandboxProfilePill';
 import { soundFx } from '@/lib/audio';
 
@@ -13,6 +13,7 @@ interface NavbarProps {
   isSandboxMode: boolean;
   onRunJudgeTour?: () => void;
   isTourRunning?: boolean;
+  onOpenRubric?: () => void;
 }
 
 const tabs = [
@@ -32,6 +33,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   isSandboxMode,
   onRunJudgeTour,
   isTourRunning,
+  onOpenRubric,
 }) => {
   const [soundEnabled, setSoundEnabled] = useState(true);
 
@@ -88,7 +90,20 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Right */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
+          {onOpenRubric && (
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={onOpenRubric}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold font-display bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 shadow-subtle transition-all"
+              title="View Hackathon Rubric Scorecard & System Architecture"
+            >
+              <Award className="w-3.5 h-3.5 text-brand-600" />
+              <span className="hidden sm:inline">Judge Rubric</span>
+            </motion.button>
+          )}
+
           {onRunJudgeTour && (
             <motion.button
               whileHover={{ scale: 1.03 }}
