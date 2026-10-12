@@ -16,7 +16,7 @@ export async function processAgentPrompt(
     agents: any[];
     subscriptions: any[];
     contracts: any[];
-    recentTransactions: any[];
+    recentTransactions?: any[];
   }
 ): Promise<AgentActionResponse> {
   const isDummy = (k?: string) => !k || k.includes('_ACTIVE') || k.startsWith('YOUR_');
