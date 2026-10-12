@@ -19,7 +19,8 @@ export async function processAgentPrompt(
     recentTransactions: any[];
   }
 ): Promise<AgentActionResponse> {
-  const geminiKey = apiKey || process.env.GEMINI_API_KEY;
+  const isDummy = (k?: string) => !k || k.includes('_ACTIVE') || k.startsWith('YOUR_');
+  const geminiKey = (!isDummy(apiKey) ? apiKey : null) || process.env.GEMINI_API_KEY;
 
   if (geminiKey && geminiKey.length > 10 && !geminiKey.startsWith('YOUR_')) {
     try {

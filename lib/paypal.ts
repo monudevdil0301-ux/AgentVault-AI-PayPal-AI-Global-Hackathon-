@@ -19,11 +19,18 @@ export interface PayPalPayoutRequest {
 
 // 1. Get Live OAuth Access Token from PayPal Sandbox
 export async function getPayPalAccessToken(clientId?: string, clientSecret?: string): Promise<string> {
-  const cid = clientId || process.env.PAYPAL_CLIENT_ID || process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
-  const secret = clientSecret || process.env.PAYPAL_CLIENT_SECRET;
+  // Priority: 1. Server Environment Variables (Vercel / .env.local)
+  //           2. Client-provided credentials if they are valid
+  const serverCid = process.env.PAYPAL_CLIENT_ID || process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
+  const serverSecret = process.env.PAYPAL_CLIENT_SECRET;
+
+  const isClientDummy = (val?: string) => !val || val.includes('_VERIFIED') || val.includes('_ACTIVE_KEY') || val.includes('your_paypal');
+
+  const cid = (!isClientDummy(clientId) ? clientId : null) || serverCid;
+  const secret = (!isClientDummy(clientSecret) ? clientSecret : null) || serverSecret;
 
   if (!cid || !secret) {
-    throw new Error('PayPal Sandbox Client ID or Secret is missing. Please configure credentials in Settings.');
+    throw new Error('PayPal Sandbox Client ID or Secret is missing. Please configure credentials in Settings or Vercel Environment Variables.');
   }
 
   const auth = Buffer.from(`${cid}:${secret}`).toString('base64');
