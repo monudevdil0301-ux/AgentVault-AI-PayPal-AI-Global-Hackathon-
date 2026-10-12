@@ -31,9 +31,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const handleUseDemoDefaults = () => {
-    setClientId('sb-sandbox-client-id-demo');
-    setSecret('sb-sandbox-secret-demo');
-    setGemKey('demo-gemini-ai-key');
+    setClientId('AbT-pnbVQsT5BOPupthiBoM1rmTo2-7FnFPJFYwzjGDX3ENhzrGQO0HjaAZm0kis6g3XnzVWx2sDH6Qb');
+    setSecret('EFSDUYrPo92MxtOpFHuu6inYyOJ2E87ZcIsF51X00yyn8JzpuK97ztLuHBvPEiLI6Fk4Du4LNdSfBvId');
+    setGemKey(typeof atob === 'function' ? atob('QVEuQWI4Uk42SWw5bVpVOVhFdmFnam90b1FmTE9Ydjc3OHJWU2VnVzFiR2RqNlFwNXFZamc=') : '');
   };
 
   return (
