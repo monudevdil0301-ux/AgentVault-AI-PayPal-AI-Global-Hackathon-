@@ -129,7 +129,8 @@ export const AgentCommandCenter: React.FC<AgentCommandCenterProps> = ({
       };
 
       onNewTransaction(tx);
-      onUpdateAgentBalance('agent-procure', -amount);
+      onUpdateAgentBalance('agent-procure', amount);
+      soundFx.playPaymentSuccess();
       setResult({
         message: `Live PayPal Sandbox Order executed: ${orderData.id} ($${amount.toFixed(2)} USD). State updated in AG Grid.`,
         isError: false,
@@ -145,10 +146,11 @@ export const AgentCommandCenter: React.FC<AgentCommandCenterProps> = ({
   };
 
   const handleScenario = (id: string) => {
+    soundFx.playClick();
     const sc = scenarios.find((s) => s.id === id);
     if (sc) {
       setCommand(sc.prompt);
-      inputRef.current?.focus();
+      handleExecute(sc.prompt);
     }
   };
 
@@ -431,7 +433,15 @@ export const AgentCommandCenter: React.FC<AgentCommandCenterProps> = ({
                 <span className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
                   ⚡ {s.agent}
                 </span>
-                <button className="flex items-center gap-1 px-3.5 py-2 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold font-display rounded-xl transition-colors shadow-sm shadow-brand-500/20">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    soundFx.playClick();
+                    setCommand(s.prompt);
+                    handleExecute(s.prompt);
+                  }}
+                  className="flex items-center gap-1 px-3.5 py-2 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold font-display rounded-xl transition-colors shadow-sm shadow-brand-500/20"
+                >
                   <span>Run Scenario</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </button>
