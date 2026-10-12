@@ -23,14 +23,28 @@ export async function getPayPalAccessToken(clientId?: string, clientSecret?: str
   const DEFAULT_SANDBOX_CID = 'AbT-pnbVQsT5BOPupthiBoM1rmTo2-7FnFPJFYwzjGDX3ENhzrGQO0HjaAZm0kis6g3XnzVWx2sDH6Qb';
   const DEFAULT_SANDBOX_SECRET = 'EFSDUYrPo92MxtOpFHuu6inYyOJ2E87ZcIsF51X00yyn8JzpuK97ztLuHBvPEiLI6Fk4Du4LNdSfBvId';
 
-  const isClientDummy = (val?: string) => !val || val.includes('_VERIFIED') || val.includes('_ACTIVE_KEY') || val.includes('your_paypal');
+  const isClientDummy = (val?: string) =>
+    !val ||
+    typeof val !== 'string' ||
+    val.trim().length === 0 ||
+    val.includes('_VERIFIED') ||
+    val.includes('_ACTIVE_KEY') ||
+    val.includes('your_paypal') ||
+    val.includes('placeholder') ||
+    val.includes('undefined') ||
+    val === 'sb-sandbox-client-id-demo' ||
+    val === 'sb-sandbox-secret-demo';
 
-  const cid = (!isClientDummy(clientId) ? clientId : null) || process.env.PAYPAL_CLIENT_ID || process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || DEFAULT_SANDBOX_CID;
-  const secret = (!isClientDummy(clientSecret) ? clientSecret : null) || process.env.PAYPAL_CLIENT_SECRET || DEFAULT_SANDBOX_SECRET;
+  const cid =
+    (!isClientDummy(clientId) ? clientId! : null) ||
+    (!isClientDummy(process.env.PAYPAL_CLIENT_ID) ? process.env.PAYPAL_CLIENT_ID! : null) ||
+    (!isClientDummy(process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID) ? process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID! : null) ||
+    DEFAULT_SANDBOX_CID;
 
-  if (!cid || !secret) {
-    throw new Error('PayPal Sandbox Client ID or Secret is missing. Please configure credentials in Settings or Vercel Environment Variables.');
-  }
+  const secret =
+    (!isClientDummy(clientSecret) ? clientSecret! : null) ||
+    (!isClientDummy(process.env.PAYPAL_CLIENT_SECRET) ? process.env.PAYPAL_CLIENT_SECRET! : null) ||
+    DEFAULT_SANDBOX_SECRET;
 
   const auth = Buffer.from(`${cid}:${secret}`).toString('base64');
   const res = await fetch('https://api-m.sandbox.paypal.com/v1/oauth2/token', {
